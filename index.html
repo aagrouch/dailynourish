@@ -843,7 +843,7 @@ function renderMealBlocks() {
     const itemsHTML = items.length === 0
       ? '<div style="font-family:\'DM Mono\',monospace;font-size:.68rem;color:var(--muted2);text-align:center;padding:8px 0;">Nothing logged yet</div>'
       : items.map((item,i) => {
-          const flag = flagFood(item);
+          const flag = getFlagForFood(item);
           return `<div class="food-item">
             <span class="food-text">${item}</span>
             ${flagLabel(flag)}
@@ -1021,16 +1021,23 @@ async function addFoodItem(name, useAI=false) {
   }
 }
 
+function getFlagForFood(name) {
+  if (S.flagCache && S.flagCache[name.toLowerCase()] !== undefined) {
+    return S.flagCache[name.toLowerCase()];
+  }
+  return flagFood(name);
+}
+
 function renderFavList() {
   const el = document.getElementById('fav-list');
   if (!el) return;
   el.innerHTML = S.favorites.slice(0,20).map(f => {
-    const flag = flagFood(f);
+    const flag = getFlagForFood(f);
     const fl = flag ? `<span class="food-flag ${flag==='avoid'?'flag-avoid':flag==='caution'?'flag-caution':'flag-good'}" style="font-size:.58rem;">${flag==='avoid'?'IgG ⚠':flag==='caution'?'limit':'✓'}</span>` : '';
     return `<div class="fav-item">
       <span class="fav-name">${f}</span>
       ${fl}
-      <button class="btn btn-ghost btn-sm" onclick="addFoodItem('${f.replace(/'/g,"\\'")}')">+ Add</button>
+      <button class="btn btn-ghost btn-sm" onclick="addFoodItem('${f.replace(/'/g,\"\\\'\")}', true)">+ Add</button>
     </div>`;
   }).join('');
 }
@@ -1427,4 +1434,4 @@ async function init() {
 init();
 </script>
 </body>
-</html>
+</
