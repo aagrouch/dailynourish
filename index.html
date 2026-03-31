@@ -469,11 +469,37 @@ const BLOOD_SUGAR_WARN = ['white rice','rice noodle','rice noodles','white bread
 const GOOD_FOODS = ['sardine','salmon','mackerel','tuna','blueberry','broccoli','spinach','kale','avocado','walnut','almond','sunflower','seaweed','green tea','dark chocolate','tomato','orange','mandarin','lentil','chickpea','asparagus','olive oil','pecan','berry','leafy'];
 
 // ═══════════════════════════════════════════════
+// SUPABASE CONFIG
+// ═══════════════════════════════════════════════
+const SUPA_URL = 'https://jizohsnmignpmrpgzmzd.supabase.co';
+const SUPA_KEY = 'sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d';
+const USER_ID  = 'jonathan';
+
+async function supaFetch(method, table, body=null, match=null) {
+  let url = `${SUPA_URL}/rest/v1/${table}`;
+  if (match) url += `?${match}`;
+  const opts = {
+    method,
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': method==='POST' ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  if (method==='GET') return r.json();
+  return r.ok;
+}
+
+// ═══════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════
-let S = loadState();
+let S = loadLocalState();
+let syncPending = false;
 
-function loadState() {
+function loadLocalState() {
   try {
     const r = localStorage.getItem('dailynourish_v1');
     if (r) return JSON.parse(r);
@@ -485,7 +511,58 @@ function loadState() {
   };
 }
 
-function save() { localStorage.setItem('dailynourish_v1', JSON.stringify(S)); }
+// Save locally immediately, then sync to Supabase
+function save() {
+  localStorage.setItem('dailynourish_v1', JSON.stringify(S));
+  syncToCloud().catch(()=>{});
+}
+
+async function syncToCloud() {
+  // Upsert profile (favorites, flagCache)
+  await supaFetch('POST', 'nourish_profile', {
+    user_id: USER_ID,
+    favorites: S.favorites,
+    flag_cache: S.flagCache || {}
+  });
+  // Upsert today's log if it has content
+  const today = todayStr();
+  const todayLog = S.logs.find(l=>l.date===today);
+  if (todayLog) {
+    await supaFetch('POST', 'nourish_logs', {
+      user_id: USER_ID,
+      log_date: todayLog.date,
+      meals: todayLog.meals,
+      supps: todayLog.supps,
+      notes: todayLog.notes || ''
+    });
+  }
+}
+
+async function loadFromCloud() {
+  try {
+    // Load all logs
+    const logs = await supaFetch('GET', 'nourish_logs', null, `user_id=eq.${USER_ID}&order=log_date.desc`);
+    if (Array.isArray(logs) && logs.length > 0) {
+      S.logs = logs.map(r => ({
+        date: r.log_date,
+        meals: r.meals,
+        supps: r.supps,
+        notes: r.notes
+      }));
+    }
+    // Load profile
+    const profiles = await supaFetch('GET', 'nourish_profile', null, `user_id=eq.${USER_ID}`);
+    if (Array.isArray(profiles) && profiles.length > 0) {
+      const p = profiles[0];
+      if (p.favorites && p.favorites.length > 0) S.favorites = p.favorites;
+      if (p.flag_cache) S.flagCache = p.flag_cache;
+    }
+    localStorage.setItem('dailynourish_v1', JSON.stringify(S));
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
 
 function todayStr() { return new Date().toISOString().slice(0,10); }
 function fmtDate(s) { return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }
@@ -607,7 +684,7 @@ function removeFood(mealId, idx) {
   save();
 }
 
-function saveLog() {
+async function saveLog() {
   const today = todayStr();
   S.todayDraft.notes = document.getElementById('day-notes').value.trim();
   const entry = {
@@ -619,7 +696,7 @@ function saveLog() {
   const idx = S.logs.findIndex(l=>l.date===today);
   if (idx>=0) S.logs[idx]=entry; else S.logs.push(entry);
   save();
-  toast('✓ Day saved!');
+  toast('✓ Saved!');
 }
 
 // ═══════════════════════════════════════════════
@@ -1098,17 +1175,38 @@ function importData(event) {
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
-// Load today's existing log into draft if it exists
-const existingToday = S.logs.find(l=>l.date===todayStr());
-if (existingToday) {
-  S.todayDraft = {
-    meals: JSON.parse(JSON.stringify(existingToday.meals)),
-    supps: {...existingToday.supps},
-    notes: existingToday.notes||''
-  };
+async function init() {
+  // Render immediately from local state so UI is never blocked
+  const existingToday = S.logs.find(l=>l.date===todayStr());
+  if (existingToday) {
+    S.todayDraft = {
+      meals: JSON.parse(JSON.stringify(existingToday.meals)),
+      supps: {...existingToday.supps},
+      notes: existingToday.notes||''
+    };
+  }
+  renderLog();
+
+  // Then sync from cloud in background and refresh if newer data found
+  try {
+    const hadData = S.logs.length;
+    const loaded = await loadFromCloud();
+    if (loaded && S.logs.length !== hadData) {
+      // Cloud had more data — refresh
+      const todayCloud = S.logs.find(l=>l.date===todayStr());
+      if (todayCloud) {
+        S.todayDraft = {
+          meals: JSON.parse(JSON.stringify(todayCloud.meals)),
+          supps: {...todayCloud.supps},
+          notes: todayCloud.notes||''
+        };
+      }
+      renderLog();
+    }
+  } catch(e) {}
 }
 
-renderLog();
+init();
 </script>
 </body>
 </html>
