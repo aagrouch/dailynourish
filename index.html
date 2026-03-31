@@ -654,8 +654,8 @@ const MEALS = [
 // IgG flags baked in from report
 const IGG_AVOID = ['milk','dairy','casein','yogurt','yoghurt','cheese','egg white','peanut','peanuts','cream','butter','whey'];
 const IGG_CAUTION = ['gluten','egg yolk','egg','oat','oatmeal','goat milk','mung bean','crab','lobster','pineapple','cinnamon','mustard','wheat','bread','pasta','flour'];
-const BLOOD_SUGAR_WARN = ['white rice','rice noodle','rice noodles','white bread','sugar','dessert','candy','soda','juice','processed'];
-const GOOD_FOODS = ['sardine','salmon','mackerel','tuna','blueberry','broccoli','spinach','kale','avocado','walnut','almond','sunflower','seaweed','green tea','dark chocolate','tomato','orange','mandarin','lentil','chickpea','asparagus','olive oil','pecan','berry','leafy','coffee','black coffee','chicken','turkey','sweet potato','brown rice'];
+const BLOOD_SUGAR_WARN = ['white rice','rice noodle','rice noodles','white bread','cane sugar','added sugar','dessert','candy','soda','fruit juice','processed food','corn syrup'];
+const GOOD_FOODS = ['sardine','salmon','mackerel','tuna','blueberry','broccoli','spinach','kale','avocado','walnut','almond','sunflower','seaweed','green tea','dark chocolate','tomato','orange','mandarin','lentil','chickpea','asparagus','olive oil','pecan','berry','leafy','coffee','black coffee','chicken','turkey','sweet potato','brown rice','snap pea','sugar snap','edamame','cucumber','zucchini','cauliflower','carrot','celery','bell pepper','mushroom','garlic','onion','ginger','green bean','bok choy','napa','kimchi','miso','tempeh','quinoa','beef','pork','shrimp','egg plant','eggplant'];
 
 // ═══════════════════════════════════════════════
 // STATE
@@ -807,9 +807,18 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 // ═══════════════════════════════════════════════
 function flagFood(name) {
   const n = name.toLowerCase();
-  if (IGG_AVOID.some(f=>n.includes(f))) return 'avoid';
-  if (IGG_CAUTION.some(f=>n.includes(f))) return 'caution';
-  if (BLOOD_SUGAR_WARN.some(f=>n.includes(f))) return 'caution';
+  // Use word-boundary matching for short keywords to avoid false positives
+  // e.g. "sugar" shouldn't match "sugar snap peas", "egg" shouldn't match "eggplant"
+  function wordMatch(keyword, text) {
+    if (keyword.length <= 4) {
+      // Short keywords: require word boundary
+      return new RegExp('\\b' + keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(text);
+    }
+    return text.includes(keyword);
+  }
+  if (IGG_AVOID.some(f=>wordMatch(f,n))) return 'avoid';
+  if (IGG_CAUTION.some(f=>wordMatch(f,n))) return 'caution';
+  if (BLOOD_SUGAR_WARN.some(f=>wordMatch(f,n))) return 'caution';
   if (GOOD_FOODS.some(f=>n.includes(f))) return 'good';
   return null;
 }
@@ -951,46 +960,44 @@ async function aiFlagFood(name) {
   }
   const quick = flagFood(name);
   try {
-    const prompt = `You are a strict nutrition screener for Jonathan who has serious IgG food sensitivities. Your job is to flag dishes and foods based on their TYPICAL ingredients, not just the main protein.
+    const prompt = `You are analyzing food for Jonathan who has IgG food sensitivities.
 
-CRITICAL AVOID LIST (IgG Class 3 — flag as "avoid" if dish commonly contains these):
-- Peanuts — including: kung pao chicken, pad thai, satay, many Chinese/Thai dishes, peanut sauce, some curries
-- Dairy (milk, cheese, butter, cream, yogurt, casein, whey) — including: most Western sauces, creamy dishes, pizza, pasta with cheese, butter-cooked foods, lattes, most desserts
-- Egg white — including: meringue, many baked goods, some fried coatings
+His AVOID list (Class 3 IgG): peanuts, dairy (milk/cheese/butter/cream/yogurt/casein/whey), egg white.
+His LIMIT list (Class 2 IgG): gluten/wheat, egg yolk.
+His WATCH list (Class 1 IgG): oats, crab, lobster, pineapple, mustard.
+Blood sugar concern: white rice, rice noodles, refined sugar, white bread.
 
-LIMIT LIST (IgG Class 2 — flag as "caution"):
-- Gluten/wheat — including: bread, pasta, flour tortillas, soy sauce (contains wheat), most fried foods with breading, ramen, udon
-- Egg yolk — including: hollandaise, mayonnaise, custard, some fried rice
+Food to analyze: "${name}"
 
-ALSO FLAG "caution" FOR:
-- White rice, rice noodles, white bread, sugary drinks, processed foods (blood sugar risk)
-- Oats, crab, lobster, pineapple, mustard (Class 1 IgG)
-- Note: tamari is OK (gluten-free soy sauce), but regular soy sauce is NOT
+Step 1: List the typical ingredients of this food or dish.
+Step 2: Check if any ingredient is on his avoid/limit/watch lists.
+Step 3: Give your verdict.
 
-GOOD FOODS (flag as "good" ONLY if no avoid/caution ingredients present):
-- Plain grilled/steamed fish, chicken, turkey, beef with no problematic sauce
-- Vegetables, leafy greens, broccoli, avocado, olive oil
-- Blueberries, oranges, berries, nuts (except peanuts), seeds
-- Black coffee, green tea, sardines, salmon
+Important rules:
+- Kung pao chicken contains peanuts → avoid
+- Pad thai contains peanuts and egg → avoid  
+- Fried rice typically contains egg → caution
+- Regular soy sauce contains wheat → caution
+- Tamari (gluten-free soy sauce) is OK
+- Sugar snap peas are a vegetable, not a sugar source → good
+- When in doubt about a dish, check its most common recipe
 
-The user logged: "${name}"
+Reply with your reasoning on one line, then on the next line write only the verdict word: avoid, caution, good, or neutral.`;
 
-Think carefully about what this dish TYPICALLY contains. If a dish commonly contains peanuts, dairy, gluten, or eggs — flag it even if not explicitly stated.
-
-Reply with ONLY one word: "avoid", "caution", "good", or "neutral"`;
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://jizohsnmignpmrpgzmzd.supabase.co/functions/v1/ai-proxy', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d'},
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 10,
+        max_tokens: 150,
         messages: [{role:'user', content: prompt}]
       })
     });
     const data = await response.json();
-    const result = data.content.map(c=>c.text||'').join('').trim().toLowerCase().replace(/[^a-z]/g,'');
-    const flag = ['avoid','caution','good','neutral'].includes(result) ? (result==='neutral'?null:result) : quick;
+    const fullText = data.content.map(c=>c.text||'').join('').trim();
+    // Get the last word/line as the verdict
+    const lines = fullText.split('\n').map(l=>l.trim()).filter(Boolean);
+    const lastLine = lines[lines.length-1].toLowerCase().replace(/[^a-z]/g,'');
+    const flag = ['avoid','caution','good','neutral'].includes(lastLine) ? (lastLine==='neutral'?null:lastLine) : quick;
     if (!S.flagCache) S.flagCache = {};
     S.flagCache[name.toLowerCase()] = flag;
     save();
@@ -1239,11 +1246,10 @@ Write a warm, personal weekly analysis (3-4 paragraphs) covering:
 Be specific, reference his actual markers and foods. Keep it practical, not clinical. No bullet points — flowing paragraphs only.`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://jizohsnmignpmrpgzmzd.supabase.co/functions/v1/ai-proxy', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d'},
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
         messages: [{role:'user', content: prompt}]
       })
