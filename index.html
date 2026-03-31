@@ -629,7 +629,7 @@ const MEALS = [
 const IGG_AVOID = ['milk','dairy','casein','yogurt','yoghurt','cheese','egg white','peanut','peanuts','cream','butter','whey'];
 const IGG_CAUTION = ['gluten','egg yolk','egg','oat','oatmeal','goat milk','mung bean','crab','lobster','pineapple','cinnamon','mustard','wheat','bread','pasta','flour'];
 const BLOOD_SUGAR_WARN = ['white rice','rice noodle','rice noodles','white bread','sugar','dessert','candy','soda','juice','processed'];
-const GOOD_FOODS = ['sardine','salmon','mackerel','tuna','blueberry','broccoli','spinach','kale','avocado','walnut','almond','sunflower','seaweed','green tea','dark chocolate','tomato','orange','mandarin','lentil','chickpea','asparagus','olive oil','pecan','berry','leafy'];
+const GOOD_FOODS = ['sardine','salmon','mackerel','tuna','blueberry','broccoli','spinach','kale','avocado','walnut','almond','sunflower','seaweed','green tea','dark chocolate','tomato','orange','mandarin','lentil','chickpea','asparagus','olive oil','pecan','berry','leafy','coffee','black coffee','chicken','turkey','sweet potato','brown rice'];
 
 // ═══════════════════════════════════════════════
 // SUPABASE CONFIG
@@ -780,13 +780,10 @@ function isD3Day() {
   const logs = [...S.logs].sort((a,b)=>b.date.localeCompare(a.date));
   const today = todayStr();
   const lastD3 = logs.find(l=>l.supps && l.supps.d3k2 && l.date !== today);
-  // Debug — remove after testing
-  console.log('D3 debug — today:', today, '| lastD3 log:', lastD3 ? lastD3.date : 'none', '| all logs:', logs.map(l=>l.date+'='+JSON.stringify(l.supps)));
   if (!lastD3) return true;
   const last = new Date(lastD3.date + 'T12:00:00');
   const now = new Date(today + 'T12:00:00');
   const diffDays = Math.round((now - last) / 86400000);
-  console.log('D3 diffDays:', diffDays);
   return diffDays >= 2;
 }
 
@@ -1392,30 +1389,27 @@ async function init() {
   }
   renderLog();
 
-  // Sync from cloud in background
+  // Sync from cloud in background — always re-render after so D3 indicator is accurate
   try {
-    const hadData = S.logs.length;
-    const loaded = await loadFromCloud();
-    if (loaded) {
-      const todayCloud = S.logs.find(l=>l.date===today);
-      if (todayCloud) {
-        // Today has been saved to cloud already — load it
-        S.todayDraft = {
-          meals: JSON.parse(JSON.stringify(todayCloud.meals)),
-          supps: {...todayCloud.supps},
-          notes: todayCloud.notes||''
-        };
-      } else {
-        // No cloud entry for today — keep fresh draft
-        S.todayDraft = {
-          meals: {breakfast:[], lunch:[], dinner:[], snacks:[]},
-          supps: {bcomplex:false, d3k2:false},
-          notes: ''
-        };
-      }
-      if (S.logs.length !== hadData) renderLog();
-      else renderLog();
+    await loadFromCloud();
+    const todayCloud = S.logs.find(l=>l.date===today);
+    if (todayCloud) {
+      // Today already saved to cloud — load it
+      S.todayDraft = {
+        meals: JSON.parse(JSON.stringify(todayCloud.meals)),
+        supps: {...todayCloud.supps},
+        notes: todayCloud.notes||''
+      };
+    } else {
+      // No cloud entry for today — fresh draft
+      S.todayDraft = {
+        meals: {breakfast:[], lunch:[], dinner:[], snacks:[]},
+        supps: {bcomplex:false, d3k2:false},
+        notes: ''
+      };
     }
+    // Always re-render after cloud sync — yesterday's data affects D3 indicator
+    renderLog();
   } catch(e) {}
 }
 
