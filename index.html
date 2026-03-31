@@ -950,22 +950,33 @@ async function aiFlagFood(name) {
   }
   const quick = flagFood(name);
   try {
-    const prompt = `You are a nutrition assistant for Jonathan, a 45-year-old male with these specific health flags:
-- IgG Class 3 AVOID: cow's milk, casein, all dairy (cheese, yogurt, butter, cream, whey, milk-based sauces), egg white, peanuts
-- IgG Class 2 LIMIT: gluten (wheat, barley, rye, bread, pasta, flour-based foods), egg yolk
-- IgG Class 1 WATCH: oatmeal/oats, crab, lobster, pineapple, cinnamon, mustard, mung bean
-- LIMIT for blood sugar (HbA1c 5.7): white rice, rice noodles, white bread, refined sugar, processed carbs, sugary drinks
-- GOOD: fatty fish (sardines, salmon, mackerel, tuna), leafy greens, broccoli, blueberries, walnuts, almonds, avocado, olive oil, green tea, dark chocolate 70%+, tomatoes, oranges, sunflower seeds, lentils, chickpeas, seaweed, lean protein (chicken breast, turkey), sweet potato, brown rice, coffee (black)
+    const prompt = `You are a strict nutrition screener for Jonathan who has serious IgG food sensitivities. Your job is to flag dishes and foods based on their TYPICAL ingredients, not just the main protein.
+
+CRITICAL AVOID LIST (IgG Class 3 — flag as "avoid" if dish commonly contains these):
+- Peanuts — including: kung pao chicken, pad thai, satay, many Chinese/Thai dishes, peanut sauce, some curries
+- Dairy (milk, cheese, butter, cream, yogurt, casein, whey) — including: most Western sauces, creamy dishes, pizza, pasta with cheese, butter-cooked foods, lattes, most desserts
+- Egg white — including: meringue, many baked goods, some fried coatings
+
+LIMIT LIST (IgG Class 2 — flag as "caution"):
+- Gluten/wheat — including: bread, pasta, flour tortillas, soy sauce (contains wheat), most fried foods with breading, ramen, udon
+- Egg yolk — including: hollandaise, mayonnaise, custard, some fried rice
+
+ALSO FLAG "caution" FOR:
+- White rice, rice noodles, white bread, sugary drinks, processed foods (blood sugar risk)
+- Oats, crab, lobster, pineapple, mustard (Class 1 IgG)
+- Note: tamari is OK (gluten-free soy sauce), but regular soy sauce is NOT
+
+GOOD FOODS (flag as "good" ONLY if no avoid/caution ingredients present):
+- Plain grilled/steamed fish, chicken, turkey, beef with no problematic sauce
+- Vegetables, leafy greens, broccoli, avocado, olive oil
+- Blueberries, oranges, berries, nuts (except peanuts), seeds
+- Black coffee, green tea, sardines, salmon
 
 The user logged: "${name}"
 
-Reply with ONLY one word:
-- "avoid" if it contains IgG Class 3 ingredients
-- "caution" if it contains IgG Class 2/1 or blood-sugar-spiking ingredients
-- "good" if it is primarily from the GOOD list
-- "neutral" if none apply
+Think carefully about what this dish TYPICALLY contains. If a dish commonly contains peanuts, dairy, gluten, or eggs — flag it even if not explicitly stated.
 
-One word only.`;
+Reply with ONLY one word: "avoid", "caution", "good", or "neutral"`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
