@@ -501,7 +501,7 @@ select option{background:var(--s1);}
 // SUPABASE CONFIG
 // ═══════════════════════════════════════════════
 const SUPA_URL = 'https://jizohsnmignpmrpgzmzd.supabase.co';
-const SUPA_KEY = 'sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imppem9oc25taWducG1ycGd6bXpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MjYyMTIsImV4cCI6MjA5MDUwMjIxMn0.jiHB-sV_0Swl089bzl4_SAvgnkGIr9E8E0ISLykadnQ';
 const USER_ID  = 'jonathan';
 
 async function supaFetch(method, table, body=null, match=null) {
@@ -986,7 +986,7 @@ Reply with your reasoning on one line, then on the next line write only the verd
 
     const response = await fetch('https://jizohsnmignpmrpgzmzd.supabase.co/functions/v1/ai-proxy', {
       method: 'POST',
-      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d', 'apikey': 'sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d'},
+      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imppem9oc25taWducG1ycGd6bXpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MjYyMTIsImV4cCI6MjA5MDUwMjIxMn0.jiHB-sV_0Swl089bzl4_SAvgnkGIr9E8E0ISLykadnQ', 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imppem9oc25taWducG1ycGd6bXpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MjYyMTIsImV4cCI6MjA5MDUwMjIxMn0.jiHB-sV_0Swl089bzl4_SAvgnkGIr9E8E0ISLykadnQ'},
       body: JSON.stringify({
         max_tokens: 150,
         messages: [{role:'user', content: prompt}]
@@ -1248,7 +1248,7 @@ Be specific, reference his actual markers and foods. Keep it practical, not clin
   try {
     const response = await fetch('https://jizohsnmignpmrpgzmzd.supabase.co/functions/v1/ai-proxy', {
       method: 'POST',
-      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d', 'apikey': 'sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d'},
+      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imppem9oc25taWducG1ycGd6bXpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MjYyMTIsImV4cCI6MjA5MDUwMjIxMn0.jiHB-sV_0Swl089bzl4_SAvgnkGIr9E8E0ISLykadnQ', 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imppem9oc25taWducG1ycGd6bXpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MjYyMTIsImV4cCI6MjA5MDUwMjIxMn0.jiHB-sV_0Swl089bzl4_SAvgnkGIr9E8E0ISLykadnQ'},
       body: JSON.stringify({
         max_tokens: 1000,
         messages: [{role:'user', content: prompt}]
