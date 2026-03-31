@@ -113,13 +113,13 @@ select option{background:var(--s1);}
 .suggestion-flag{font-size:.6rem;font-family:'DM Mono',monospace;padding:1px 6px;border-radius:3px;}
 
 /* SUPPLEMENTS */
-.supp-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.supp-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
 .supp-row:last-child{border-bottom:none;}
-.supp-check{width:22px;height:22px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;}
+.supp-check{width:28px;height:28px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;-webkit-appearance:auto;appearance:auto;opacity:1;}
 .supp-info{flex:1;}
 .supp-name{font-size:.88rem;font-weight:500;}
 .supp-detail{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);margin-top:2px;}
-.supp-schedule{font-family:'DM Mono',monospace;font-size:.6rem;padding:2px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);color:var(--muted);}
+.supp-schedule{font-family:'DM Mono',monospace;font-size:.6rem;padding:2px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);color:var(--muted);white-space:nowrap;}
 
 /* SCORE */
 .score-circle{width:80px;height:80px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:600;line-height:1;flex-shrink:0;}
@@ -222,22 +222,22 @@ select option{background:var(--s1);}
       <!-- Supplements -->
       <div class="sec">Supplements</div>
       <div class="card">
-        <div class="supp-row">
+        <label class="supp-row" for="supp-bcomplex">
           <input type="checkbox" class="supp-check" id="supp-bcomplex" onchange="saveSupp()">
           <div class="supp-info">
             <div class="supp-name">B-Complex (BioActive Complete)</div>
             <div class="supp-detail">Life Extension · B6, B9, B12 → targets homocysteine</div>
           </div>
           <div class="supp-schedule">Daily</div>
-        </div>
-        <div class="supp-row">
+        </label>
+        <label class="supp-row" for="supp-d3k2">
           <input type="checkbox" class="supp-check" id="supp-d3k2" onchange="saveSupp()">
           <div class="supp-info">
             <div class="supp-name">D3 + K2 (Sports Research)</div>
             <div class="supp-detail">125mcg D3 / 100mcg K2 · immunity + bone</div>
           </div>
           <div class="supp-schedule" id="d3-schedule">Every other day</div>
-        </div>
+        </label>
       </div>
 
       <!-- Meals -->
