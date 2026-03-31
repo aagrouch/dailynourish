@@ -590,8 +590,6 @@ function handlePinComplete() {
   }
 }
 
-pinCheckSession();
-
 // ═══════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════
@@ -1330,6 +1328,8 @@ function importData(event) {
 // INIT
 // ═══════════════════════════════════════════════
 async function init() {
+  // Check PIN first
+  pinCheckSession();
   // Render immediately from local state so UI is never blocked
   const existingToday = S.logs.find(l=>l.date===todayStr());
   if (existingToday) {
