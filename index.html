@@ -499,48 +499,59 @@ select option{background:var(--s1);}
 // ═══════════════════════════════════════════════
 // PIN LOCK
 // ═══════════════════════════════════════════════
-const PIN_KEY = 'dailynourish_pin';
 const PIN_UNLOCKED_KEY = 'dailynourish_unlocked';
 let pinBuffer = '';
-let pinMode = 'enter'; // 'setup' | 'enter' | 'confirm'
+let pinMode = 'enter';
 let pinSetupFirst = '';
+let cloudPin = null;
 
-function pinCheckSession() {
-  const stored = localStorage.getItem(PIN_KEY);
-  if (!stored) {
-    // No PIN set yet — setup mode
-    pinMode = 'setup';
-    document.getElementById('pin-msg').textContent = 'Create a 4-digit PIN';
-    document.getElementById('pin-hint').textContent = 'You will need this every day to open the app';
-    return;
-  }
-  // Check if already unlocked today
+async function pinCheckSession() {
   const unlocked = localStorage.getItem(PIN_UNLOCKED_KEY);
   const today = new Date().toISOString().slice(0,10);
   if (unlocked === today) {
     document.getElementById('pin-screen').classList.add('hidden');
     return;
   }
-  pinMode = 'enter';
-  document.getElementById('pin-msg').textContent = 'Enter your PIN';
-  document.getElementById('pin-hint').textContent = '';
+  try {
+    const profiles = await supaFetch('GET', 'nourish_profile', null, 'user_id=eq.' + USER_ID);
+    if (Array.isArray(profiles) && profiles.length > 0 && profiles[0].pin) {
+      cloudPin = profiles[0].pin;
+      localStorage.setItem('dailynourish_pin_cache', cloudPin);
+      pinMode = 'enter';
+      document.getElementById('pin-msg').textContent = 'Enter your PIN';
+      document.getElementById('pin-hint').textContent = '';
+    } else {
+      cloudPin = null;
+      pinMode = 'setup';
+      document.getElementById('pin-msg').textContent = 'Create a 4-digit PIN';
+      document.getElementById('pin-hint').textContent = 'You will need this every day to open the app';
+    }
+  } catch(e) {
+    const local = localStorage.getItem('dailynourish_pin_cache');
+    if (local) {
+      cloudPin = local;
+      pinMode = 'enter';
+      document.getElementById('pin-msg').textContent = 'Enter your PIN';
+      document.getElementById('pin-hint').textContent = '(offline mode)';
+    } else {
+      document.getElementById('pin-screen').classList.add('hidden');
+    }
+  }
 }
 
 function pinPress(digit) {
   if (pinBuffer.length >= 4) return;
   pinBuffer += digit;
   updatePinDots();
-  if (pinBuffer.length === 4) {
-    setTimeout(() => handlePinComplete(), 150);
-  }
+  if (pinBuffer.length === 4) setTimeout(() => handlePinComplete(), 150);
 }
 
 function pinDel() {
   pinBuffer = pinBuffer.slice(0,-1);
-  updatePinDots(false);
+  updatePinDots();
 }
 
-function updatePinDots(filled=true) {
+function updatePinDots() {
   for (let i=0;i<4;i++) {
     const dot = document.getElementById('pd'+i);
     dot.classList.remove('error');
@@ -553,8 +564,7 @@ function pinError() {
   setTimeout(() => { pinBuffer=''; updatePinDots(); }, 600);
 }
 
-function handlePinComplete() {
-  const stored = localStorage.getItem(PIN_KEY);
+async function handlePinComplete() {
   if (pinMode === 'setup') {
     pinSetupFirst = pinBuffer;
     pinBuffer = '';
@@ -566,11 +576,12 @@ function handlePinComplete() {
   }
   if (pinMode === 'confirm') {
     if (pinBuffer === pinSetupFirst) {
-      localStorage.setItem(PIN_KEY, pinBuffer);
+      await supaFetch('POST', 'nourish_profile', { user_id: USER_ID, pin: pinBuffer });
+      localStorage.setItem('dailynourish_pin_cache', pinBuffer);
+      cloudPin = pinBuffer;
       const today = new Date().toISOString().slice(0,10);
       localStorage.setItem(PIN_UNLOCKED_KEY, today);
       document.getElementById('pin-screen').classList.add('hidden');
-      document.getElementById('pin-hint').textContent = '';
     } else {
       pinSetupFirst = '';
       pinMode = 'setup';
@@ -579,8 +590,8 @@ function handlePinComplete() {
     }
     return;
   }
-  // enter mode
-  if (pinBuffer === stored) {
+  if (pinBuffer === cloudPin) {
+    localStorage.setItem('dailynourish_pin_cache', cloudPin);
     const today = new Date().toISOString().slice(0,10);
     localStorage.setItem(PIN_UNLOCKED_KEY, today);
     document.getElementById('pin-screen').classList.add('hidden');
