@@ -650,8 +650,7 @@ function addFoodFromInput() {
   const input = document.getElementById('food-input');
   const val = input.value.trim();
   if (!val) return;
-  addFoodItem(val);
-  // Save to favorites if not already there
+  addFoodItem(val, true);
   if (!S.favorites.some(f=>f.toLowerCase()===val.toLowerCase())) {
     S.favorites.unshift(val);
     if (S.favorites.length > 50) S.favorites = S.favorites.slice(0,50);
@@ -661,15 +660,70 @@ function addFoodFromInput() {
   renderFavList();
 }
 
-function addFoodItem(name) {
+async function aiFlagFood(name) {
+  if (S.flagCache && S.flagCache[name.toLowerCase()] !== undefined) {
+    return S.flagCache[name.toLowerCase()];
+  }
+  const quick = flagFood(name);
+  try {
+    const prompt = `You are a nutrition assistant for Jonathan, a 45-year-old male with these specific health flags:
+- IgG Class 3 AVOID: cow's milk, casein, all dairy (cheese, yogurt, butter, cream, whey, milk-based sauces), egg white, peanuts
+- IgG Class 2 LIMIT: gluten (wheat, barley, rye, bread, pasta, flour-based foods), egg yolk
+- IgG Class 1 WATCH: oatmeal/oats, crab, lobster, pineapple, cinnamon, mustard, mung bean
+- LIMIT for blood sugar (HbA1c 5.7): white rice, rice noodles, white bread, refined sugar, processed carbs, sugary drinks
+- GOOD: fatty fish (sardines, salmon, mackerel, tuna), leafy greens, broccoli, blueberries, walnuts, almonds, avocado, olive oil, green tea, dark chocolate 70%+, tomatoes, oranges, sunflower seeds, lentils, chickpeas, seaweed, lean protein (chicken breast, turkey), sweet potato, brown rice, coffee (black)
+
+The user logged: "${name}"
+
+Reply with ONLY one word:
+- "avoid" if it contains IgG Class 3 ingredients
+- "caution" if it contains IgG Class 2/1 or blood-sugar-spiking ingredients
+- "good" if it is primarily from the GOOD list
+- "neutral" if none apply
+
+One word only.`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 10,
+        messages: [{role:'user', content: prompt}]
+      })
+    });
+    const data = await response.json();
+    const result = data.content.map(c=>c.text||'').join('').trim().toLowerCase().replace(/[^a-z]/g,'');
+    const flag = ['avoid','caution','good','neutral'].includes(result) ? (result==='neutral'?null:result) : quick;
+    if (!S.flagCache) S.flagCache = {};
+    S.flagCache[name.toLowerCase()] = flag;
+    save();
+    return flag;
+  } catch(e) {
+    return quick;
+  }
+}
+
+async function addFoodItem(name, useAI=false) {
   if (!S.todayDraft.meals[currentMealId]) S.todayDraft.meals[currentMealId]=[];
   S.todayDraft.meals[currentMealId].push(name);
   save();
   renderMealBlocks();
-  // Update fav list
   const favList = document.getElementById('fav-list');
   if (favList) renderFavList();
-  toast(`Added: ${name}`);
+  toast(useAI ? `Added: ${name} · analyzing…` : `Added: ${name}`);
+
+  if (useAI) {
+    const quickFlag = flagFood(name);
+    const aiFlag = await aiFlagFood(name);
+    if (aiFlag !== quickFlag) {
+      renderMealBlocks();
+      if (aiFlag === 'avoid') toast(`⚠️ ${name} — IgG flag!`);
+      else if (aiFlag === 'good') toast(`✓ ${name} — good choice!`);
+    } else {
+      toast(`Added: ${name}`);
+    }
+  }
 }
 
 function renderFavList() {
