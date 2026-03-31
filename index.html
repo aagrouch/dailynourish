@@ -663,20 +663,28 @@ let S = loadLocalState();
 let syncPending = false;
 
 function loadLocalState() {
-  try {
-    const r = localStorage.getItem('dailynourish_v1');
-    if (r) return JSON.parse(r);
-  } catch(e){}
-  return {
+  const fresh = {
     logs: [],
     favorites: ['Sardines (Crown Prince)','Seaweed snacks','Walnut mix','Blueberries','Orange','Broccoli','Spinach','Avocado','Green tea','Salmon','Brown rice','Chicken breast','Sweet potato'],
     todayDraft: {meals:{breakfast:[],lunch:[],dinner:[],snacks:[]}, supps:{bcomplex:false,d3k2:false}, notes:''},
+    flagCache: {}
   };
+  try {
+    const r = localStorage.getItem('dailynourish_v1');
+    if (r) {
+      const parsed = JSON.parse(r);
+      // Never restore todayDraft from storage — always start fresh
+      return {...fresh, logs: parsed.logs||[], favorites: parsed.favorites||fresh.favorites, flagCache: parsed.flagCache||{}};
+    }
+  } catch(e){}
+  return fresh;
 }
 
 // Save locally immediately, then sync to Supabase
 function save() {
-  localStorage.setItem('dailynourish_v1', JSON.stringify(S));
+  // Never persist todayDraft — it should always be rebuilt fresh each day
+  const toStore = {logs: S.logs, favorites: S.favorites, flagCache: S.flagCache||{}};
+  localStorage.setItem('dailynourish_v1', JSON.stringify(toStore));
   syncToCloud().catch(()=>{});
 }
 
@@ -741,7 +749,10 @@ async function loadFromCloud() {
   }
 }
 
-function todayStr() { return new Date().toISOString().slice(0,10); }
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function fmtDate(s) { return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }
 function fmtDateShort(s) { return new Date(s+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
 
