@@ -415,6 +415,23 @@ select option{background:var(--s1);}
         </div>
       </div>
 
+      <div class="sec">Data & Backup</div>
+      <div class="card">
+        <div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted);line-height:1.8;margin-bottom:12px;">
+          Your data is stored in Safari. Export regularly to iCloud Drive or Files to keep a backup — especially before clearing Safari data or switching phones.
+        </div>
+        <button class="btn btn-primary" onclick="exportData()" style="margin-top:0;background:var(--accent);">⬇ Export My Data</button>
+        <div style="margin-top:8px;">
+          <label class="btn btn-ghost" style="width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            ⬆ Import Backup
+            <input type="file" accept=".json" onchange="importData(event)" style="display:none;">
+          </label>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted2);margin-top:10px;text-align:center;">
+          Tip: save the exported file to iCloud Drive for safekeeping
+        </div>
+      </div>
+
       <div style="height:28px;"></div>
     </div>
   </div>
@@ -1027,6 +1044,56 @@ function renderHistory() {
 function openModal() { document.getElementById('modal-bg').classList.add('open'); }
 function closeModal(e) { if(e.target===document.getElementById('modal-bg')) closeModalDirect(); }
 function closeModalDirect() { document.getElementById('modal-bg').classList.remove('open'); }
+
+// ═══════════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════════
+function exportData() {
+  const data = JSON.stringify(S, null, 2);
+  const blob = new Blob([data], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `dailynourish-backup-${date}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('✓ Data exported — save to iCloud Drive!');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.logs) { toast('Invalid backup file'); return; }
+      // Merge logs — keep existing + add any new from import
+      const existingDates = new Set(S.logs.map(l=>l.date));
+      const newLogs = imported.logs.filter(l=>!existingDates.has(l.date));
+      S.logs = [...S.logs, ...newLogs].sort((a,b)=>a.date.localeCompare(b.date));
+      // Merge favorites
+      if (imported.favorites) {
+        imported.favorites.forEach(f => {
+          if (!S.favorites.includes(f)) S.favorites.push(f);
+        });
+      }
+      // Merge flag cache
+      if (imported.flagCache) {
+        S.flagCache = {...imported.flagCache, ...(S.flagCache||{})};
+      }
+      save();
+      toast(`✓ Imported ${newLogs.length} new day(s)!`);
+    } catch(err) {
+      toast('Could not read backup file');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
 
 // ═══════════════════════════════════════════════
 // INIT
