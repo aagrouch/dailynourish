@@ -986,7 +986,7 @@ Reply with your reasoning on one line, then on the next line write only the verd
 
     const response = await fetch('https://jizohsnmignpmrpgzmzd.supabase.co/functions/v1/ai-proxy', {
       method: 'POST',
-      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d'},
+      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d', 'apikey': 'sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d'},
       body: JSON.stringify({
         max_tokens: 150,
         messages: [{role:'user', content: prompt}]
@@ -1248,7 +1248,7 @@ Be specific, reference his actual markers and foods. Keep it practical, not clin
   try {
     const response = await fetch('https://jizohsnmignpmrpgzmzd.supabase.co/functions/v1/ai-proxy', {
       method: 'POST',
-      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d'},
+      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d', 'apikey': 'sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d'},
       body: JSON.stringify({
         max_tokens: 1000,
         messages: [{role:'user', content: prompt}]
