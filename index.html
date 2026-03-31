@@ -766,12 +766,16 @@ function toast(msg) {
 // D3 EVERY OTHER DAY
 // ═══════════════════════════════════════════════
 function isD3Day() {
-  // Find last D3 day
+  // Find last D3 day (excluding today)
   const logs = [...S.logs].sort((a,b)=>b.date.localeCompare(a.date));
-  const lastD3 = logs.find(l=>l.supps && l.supps.d3k2 && l.date !== todayStr());
+  const today = todayStr();
+  const lastD3 = logs.find(l=>l.supps && l.supps.d3k2 && l.date !== today);
   if (!lastD3) return true;
-  const diff = Math.round((new Date(todayStr()) - new Date(lastD3.date)) / 86400000);
-  return diff >= 2;
+  // Compare date strings directly to avoid timezone issues
+  const last = new Date(lastD3.date + 'T12:00:00');
+  const now = new Date(today + 'T12:00:00');
+  const diffDays = Math.round((now - last) / 86400000);
+  return diffDays >= 2;
 }
 
 // ═══════════════════════════════════════════════
@@ -1355,32 +1359,50 @@ function importData(event) {
 async function init() {
   // Check PIN first
   pinCheckSession();
-  // Render immediately from local state so UI is never blocked
-  const existingToday = S.logs.find(l=>l.date===todayStr());
+
+  // Always start with a fresh draft for today
+  const today = todayStr();
+  const existingToday = S.logs.find(l=>l.date===today);
   if (existingToday) {
+    // Only pre-fill if there is already a saved log FOR TODAY
     S.todayDraft = {
       meals: JSON.parse(JSON.stringify(existingToday.meals)),
       supps: {...existingToday.supps},
       notes: existingToday.notes||''
     };
+  } else {
+    // New day — always start fresh
+    S.todayDraft = {
+      meals: {breakfast:[], lunch:[], dinner:[], snacks:[]},
+      supps: {bcomplex:false, d3k2:false},
+      notes: ''
+    };
   }
   renderLog();
 
-  // Then sync from cloud in background and refresh if newer data found
+  // Sync from cloud in background
   try {
     const hadData = S.logs.length;
     const loaded = await loadFromCloud();
-    if (loaded && S.logs.length !== hadData) {
-      // Cloud had more data — refresh
-      const todayCloud = S.logs.find(l=>l.date===todayStr());
+    if (loaded) {
+      const todayCloud = S.logs.find(l=>l.date===today);
       if (todayCloud) {
+        // Today has been saved to cloud already — load it
         S.todayDraft = {
           meals: JSON.parse(JSON.stringify(todayCloud.meals)),
           supps: {...todayCloud.supps},
           notes: todayCloud.notes||''
         };
+      } else {
+        // No cloud entry for today — keep fresh draft
+        S.todayDraft = {
+          meals: {breakfast:[], lunch:[], dinner:[], snacks:[]},
+          supps: {bcomplex:false, d3k2:false},
+          notes: ''
+        };
       }
-      renderLog();
+      if (S.logs.length !== hadData) renderLog();
+      else renderLog();
     }
   } catch(e) {}
 }
