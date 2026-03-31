@@ -497,6 +497,32 @@ select option{background:var(--s1);}
 
 <script>
 // ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// SUPABASE CONFIG
+// ═══════════════════════════════════════════════
+const SUPA_URL = 'https://jizohsnmignpmrpgzmzd.supabase.co';
+const SUPA_KEY = 'sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d';
+const USER_ID  = 'jonathan';
+
+async function supaFetch(method, table, body=null, match=null) {
+  let url = `${SUPA_URL}/rest/v1/${table}`;
+  if (match) url += `?${match}`;
+  const opts = {
+    method,
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': method==='POST' ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  if (method==='GET') return r.json();
+  return r.ok;
+}
+
+// ═══════════════════════════════════════════════
 // PIN LOCK
 // ═══════════════════════════════════════════════
 const PIN_UNLOCKED_KEY = 'dailynourish_unlocked';
@@ -630,31 +656,6 @@ const IGG_AVOID = ['milk','dairy','casein','yogurt','yoghurt','cheese','egg whit
 const IGG_CAUTION = ['gluten','egg yolk','egg','oat','oatmeal','goat milk','mung bean','crab','lobster','pineapple','cinnamon','mustard','wheat','bread','pasta','flour'];
 const BLOOD_SUGAR_WARN = ['white rice','rice noodle','rice noodles','white bread','sugar','dessert','candy','soda','juice','processed'];
 const GOOD_FOODS = ['sardine','salmon','mackerel','tuna','blueberry','broccoli','spinach','kale','avocado','walnut','almond','sunflower','seaweed','green tea','dark chocolate','tomato','orange','mandarin','lentil','chickpea','asparagus','olive oil','pecan','berry','leafy','coffee','black coffee','chicken','turkey','sweet potato','brown rice'];
-
-// ═══════════════════════════════════════════════
-// SUPABASE CONFIG
-// ═══════════════════════════════════════════════
-const SUPA_URL = 'https://jizohsnmignpmrpgzmzd.supabase.co';
-const SUPA_KEY = 'sb_publishable_pW6I2bGvVJYGvj5a2XbkkA_wFi60Z0d';
-const USER_ID  = 'jonathan';
-
-async function supaFetch(method, table, body=null, match=null) {
-  let url = `${SUPA_URL}/rest/v1/${table}`;
-  if (match) url += `?${match}`;
-  const opts = {
-    method,
-    headers: {
-      'apikey': SUPA_KEY,
-      'Authorization': `Bearer ${SUPA_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': method==='POST' ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal'
-    }
-  };
-  if (body) opts.body = JSON.stringify(body);
-  const r = await fetch(url, opts);
-  if (method==='GET') return r.json();
-  return r.ok;
-}
 
 // ═══════════════════════════════════════════════
 // STATE
@@ -926,7 +927,7 @@ function showSuggestions(val) {
   el.innerHTML = matches.map(m => {
     const flag = flagFood(m);
     const fl = flag ? `<span class="suggestion-flag ${flag==='avoid'?'flag-avoid':flag==='caution'?'flag-caution':'flag-good'}">${flag==='avoid'?'IgG ⚠':flag==='caution'?'limit':'✓'}</span>` : '';
-    return `<div class="suggestion-item" onclick="addFoodItem('${m.replace(/'/g,"\\'")}')"><span>${m}</span>${fl}</div>`;
+    return `<div class="suggestion-item" data-fav="${m.replace(/'/g, '&apos;')}" onclick="addFavFood(this)"><span>${m}</span>${fl}</div>`;
   }).join('');
 }
 
@@ -1037,9 +1038,14 @@ function renderFavList() {
     return `<div class="fav-item">
       <span class="fav-name">${f}</span>
       ${fl}
-      <button class="btn btn-ghost btn-sm" onclick="addFoodItem('${f.replace(/'/g,\"\\\'\")}', true)">+ Add</button>
+      <button class="btn btn-ghost btn-sm" data-fav="${f.replace(/'/g, '&apos;')}" onclick="addFavFood(this)">+ Add</button>
     </div>`;
   }).join('');
+}
+
+function addFavFood(btn) {
+  const name = btn.dataset.fav.replace(/&apos;/g, "'");
+  addFoodItem(name, true);
 }
 
 // ═══════════════════════════════════════════════
