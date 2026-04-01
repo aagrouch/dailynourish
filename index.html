@@ -1227,9 +1227,17 @@ function renderDishResult(result, originalInput) {
           <option value="dinner" selected>Dinner</option>
           <option value="snacks">Snacks</option>
         </select>
-        <button class="btn btn-primary" style="margin-top:0;flex:1;" onclick="logDishIngredients(${JSON.stringify(logItems)})">+ Log to Today</button>
+        <button class="btn btn-primary" style="margin-top:0;flex:1;" onclick="logPendingDish()">+ Log to Today</button>
       </div>
     </div>`;
+  // Store items for logging
+  window._pendingDishItems = logItems;
+}
+
+function logPendingDish() {
+  const items = window._pendingDishItems || [];
+  if (items.length === 0) { toast('No ingredients to log'); return; }
+  logDishIngredients(items);
 }
 
 async function logDishIngredients(items) {
